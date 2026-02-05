@@ -1,0 +1,484 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Whack-a-Face</title>
+  <style>
+    :root{
+      --bg:#0b0f1a;
+      --card:#121a2b;
+      --text:#e8eefc;
+      --muted:#a9b7dd;
+      --accent:#7c5cff;
+      --good:#2ee59d;
+      --bad:#ff4d6d;
+      --border: rgba(255,255,255,.12);
+      --shadow: 0 14px 40px rgba(0,0,0,.45);
+      --radius: 18px;
+    }
+    *{ box-sizing:border-box; }
+    body{
+      margin:0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
+      color: var(--text);
+      background:
+        radial-gradient(1200px 800px at 20% 10%, rgba(124,92,255,.24), transparent 60%),
+        radial-gradient(900px 650px at 80% 40%, rgba(46,229,157,.16), transparent 55%),
+        var(--bg);
+    }
+    .wrap{
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 18px 16px 40px;
+    }
+    header{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:12px;
+      flex-wrap:wrap;
+      margin-bottom: 12px;
+    }
+    h1{
+      margin:0;
+      font-size: clamp(22px, 3vw, 32px);
+      letter-spacing:.2px;
+    }
+    .sub{
+      margin:6px 0 0;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.4;
+    }
+    .panel{
+      background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.03));
+      border:1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow:hidden;
+    }
+    .topbar{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      flex-wrap:wrap;
+      padding: 14px 14px;
+      border-bottom:1px solid var(--border);
+      background: rgba(0,0,0,.18);
+    }
+    .stats{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .stat{
+      border:1px solid var(--border);
+      background: rgba(255,255,255,.03);
+      padding: 7px 10px;
+      border-radius: 999px;
+    }
+    .stat b{ color: var(--text); }
+    .controls{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
+    }
+    .btn{
+      border:1px solid var(--border);
+      background: rgba(255,255,255,.04);
+      color: var(--text);
+      padding: 10px 12px;
+      border-radius: 12px;
+      cursor:pointer;
+      font-weight: 800;
+      transition: transform .12s ease, background .12s ease;
+      user-select:none;
+      touch-action: manipulation;
+    }
+    .btn:hover{ transform: translateY(-1px); background: rgba(255,255,255,.07); }
+    .btn.primary{
+      background: rgba(124,92,255,.28);
+      border-color: rgba(124,92,255,.55);
+    }
+    .btn.danger{
+      background: rgba(255,77,109,.14);
+      border-color: rgba(255,77,109,.35);
+    }
+    .btn:disabled{ opacity:.45; cursor:not-allowed; transform:none; }
+
+    .content{ padding: 14px; }
+
+    /* Board */
+    .board{
+      display:grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 12px;
+    }
+    @media (max-width: 420px){
+      .board{ grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+    }
+    .hole{
+      position:relative;
+      aspect-ratio: 1 / 1;
+      border-radius: 18px;
+      border:1px solid var(--border);
+      background:
+        radial-gradient(70% 60% at 50% 65%, rgba(0,0,0,.55), rgba(0,0,0,.15)),
+        rgba(255,255,255,.03);
+      overflow:hidden;
+      box-shadow: inset 0 18px 40px rgba(0,0,0,.35);
+      touch-action: manipulation;
+    }
+
+    /* The face that pops up */
+    .face{
+      position:absolute;
+      left: 50%;
+      bottom: -55%;
+      transform: translateX(-50%);
+      width: 78%;
+      height: 78%;
+      border-radius: 18px;
+      border: 1px solid rgba(255,255,255,.16);
+      background: rgba(124,92,255,.10);
+      box-shadow: 0 16px 40px rgba(0,0,0,.45);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      cursor:pointer;
+      user-select:none;
+      transition: bottom 140ms ease;
+      overflow:hidden;
+    }
+    .face.up{ bottom: 6%; }
+    .face:active{ transform: translateX(-50%) scale(.98); }
+
+    .face img{
+      width:100%;
+      height:100%;
+      object-fit: cover;
+      display:block;
+      filter: saturate(1.05) contrast(1.05);
+    }
+    .fallback{
+      font-size: 34px;
+      font-weight: 900;
+    }
+
+    .tip{
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .banner{
+      margin-top: 12px;
+      padding: 10px 12px;
+      border-radius: 14px;
+      border:1px solid var(--border);
+      background: rgba(255,255,255,.03);
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .banner b{ color: var(--text); }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <header>
+      <div>
+        <h1>🐶 Whack-a-Face</h1>
+        <div class="sub">Tap the face when it pops up. Fast hands = high score.</div>
+      </div>
+    </header>
+
+    <div class="panel">
+      <div class="topbar">
+        <div class="stats">
+          <div class="stat">Score: <b id="score">0</b></div>
+          <div class="stat">Best: <b id="best">0</b></div>
+          <div class="stat">Time: <b id="time">30.0</b>s</div>
+          <div class="stat">Streak: <b id="streak">0</b></div>
+        </div>
+        <div class="controls">
+          <button class="btn primary" id="startBtn">Start</button>
+          <button class="btn" id="restartBtn" disabled>Restart</button>
+          <button class="btn danger" id="stopBtn" disabled>Stop</button>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="banner" id="status">
+          Upload your photo as <b>face.jpg</b> next to <b>index.html</b>. Then press <b>Start</b>.
+        </div>
+
+        <div class="board" id="board" aria-label="Whack-a-face board"></div>
+
+        <div class="tip">
+          Difficulty ramps up over time. Works on phone + computer. (Pro tip: aim for a streak!)
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ====== SETTINGS YOU CAN EDIT ======
+    const FACE_FILE = "face.jpg";     // <-- if your file is IMG_4381.jpeg, change to "IMG_4381.jpeg"
+    const GAME_SECONDS = 30;          // round length
+    const HOLES = 9;                  // 3x3
+    // ==================================
+
+    const $ = (id) => document.getElementById(id);
+    const board = $("board");
+    const scoreEl = $("score");
+    const bestEl = $("best");
+    const timeEl = $("time");
+    const streakEl = $("streak");
+    const statusEl = $("status");
+
+    const startBtn = $("startBtn");
+    const restartBtn = $("restartBtn");
+    const stopBtn = $("stopBtn");
+
+    const store = {
+      get(key, fallback){
+        try{
+          const v = localStorage.getItem(key);
+          return v === null ? fallback : JSON.parse(v);
+        }catch{ return fallback; }
+      },
+      set(key, val){
+        try{ localStorage.setItem(key, JSON.stringify(val)); }catch{}
+      }
+    };
+
+    let best = store.get("whack_best", 0);
+    bestEl.textContent = best;
+
+    let running = false;
+    let score = 0;
+    let streak = 0;
+
+    let endAt = 0;
+    let raf = null;
+
+    let holes = [];
+    let currentUpIndex = -1;
+    let nextPopAt = 0;
+
+    // For preventing double hits
+    let lastPopToken = 0;
+    let canHit = false;
+
+    function setButtons(isRunning){
+      running = isRunning;
+      startBtn.disabled = isRunning;
+      restartBtn.disabled = !isRunning;
+      stopBtn.disabled = !isRunning;
+    }
+
+    function resetHUD(){
+      score = 0; streak = 0;
+      scoreEl.textContent = "0";
+      streakEl.textContent = "0";
+      timeEl.textContent = GAME_SECONDS.toFixed(1);
+    }
+
+    function buildBoard(){
+      board.innerHTML = "";
+      holes = [];
+
+      for(let i=0;i<HOLES;i++){
+        const hole = document.createElement("div");
+        hole.className = "hole";
+
+        const face = document.createElement("div");
+        face.className = "face";
+        face.setAttribute("role", "button");
+        face.setAttribute("aria-label", "Tap face");
+
+        // image (with fallback)
+        const img = new Image();
+        img.src = FACE_FILE;
+        img.alt = "Face";
+        img.onload = () => {
+          // ok
+        };
+        img.onerror = () => {
+          face.innerHTML = `<div class="fallback">😵‍💫</div>`;
+          statusEl.innerHTML = `I couldn’t load <b>${FACE_FILE}</b>. Make sure the filename matches exactly (case-sensitive).`;
+        };
+
+        // only append img if it loads; but it's fine to append now
+        face.appendChild(img);
+
+        // click/tap handler
+        face.addEventListener("click", () => {
+          if(!running || !canHit) return;
+          // must be the currently-up hole
+          if(i !== currentUpIndex) return;
+
+          canHit = false;
+          whack();
+        });
+
+        hole.appendChild(face);
+        board.appendChild(hole);
+
+        holes.push({ hole, face });
+      }
+    }
+
+    function setBestIfNeeded(){
+      if(score > best){
+        best = score;
+        bestEl.textContent = best;
+        store.set("whack_best", best);
+      }
+    }
+
+    function popDown(){
+      if(currentUpIndex >= 0){
+        holes[currentUpIndex].face.classList.remove("up");
+      }
+      currentUpIndex = -1;
+      canHit = false;
+    }
+
+    function randomHoleIndex(exclude){
+      let idx = Math.floor(Math.random() * HOLES);
+      if(HOLES <= 1) return idx;
+      while(idx === exclude){
+        idx = Math.floor(Math.random() * HOLES);
+      }
+      return idx;
+    }
+
+    function scheduleNextPop(now, secondsLeft){
+      // difficulty ramp: pop faster near the end
+      const progress = 1 - (secondsLeft / GAME_SECONDS); // 0 -> 1
+      const minDelay = 140;   // ms
+      const maxDelay = 520;   // ms
+      const delay = maxDelay - (maxDelay - minDelay) * progress;
+
+      nextPopAt = now + delay;
+
+      // up-time also gets shorter
+      const minUp = 220;
+      const maxUp = 520;
+      return maxUp - (maxUp - minUp) * progress; // ms
+    }
+
+    function popUp(now){
+      const secondsLeft = Math.max(0, (endAt - now) / 1000);
+      const upTime = scheduleNextPop(now, secondsLeft);
+
+      // choose hole and pop
+      popDown();
+      const idx = randomHoleIndex(currentUpIndex);
+      currentUpIndex = idx;
+
+      const token = ++lastPopToken;
+      holes[idx].face.classList.add("up");
+      canHit = true;
+
+      // If you miss, streak resets when it goes down
+      setTimeout(() => {
+        if(!running) return;
+        // if still the same pop token and still up, count as miss
+        if(token === lastPopToken && currentUpIndex === idx){
+          popDown();
+          streak = 0;
+          streakEl.textContent = String(streak);
+        }
+      }, upTime);
+    }
+
+    function whack(){
+      // scoring: base + streak bonus
+      streak++;
+      const bonus = Math.min(10, Math.floor(streak / 3)); // small bonus every 3 streaks
+      score += (10 + bonus);
+
+      scoreEl.textContent = String(score);
+      streakEl.textContent = String(streak);
+
+      // little feedback: quickly pop down
+      popDown();
+    }
+
+    function gameOver(){
+      setButtons(false);
+      if(raf) cancelAnimationFrame(raf);
+      raf = null;
+
+      popDown();
+      setBestIfNeeded();
+
+      statusEl.innerHTML = `Round over. Final score: <b>${score}</b>. Hit <b>Restart</b> to run it back.`;
+    }
+
+    function tick(now){
+      if(!running) return;
+
+      const secondsLeft = Math.max(0, (endAt - now) / 1000);
+      timeEl.textContent = secondsLeft.toFixed(1);
+
+      if(secondsLeft <= 0){
+        gameOver();
+        return;
+      }
+
+      if(now >= nextPopAt){
+        popUp(now);
+      }
+
+      raf = requestAnimationFrame(tick);
+    }
+
+    function start(){
+      resetHUD();
+      setButtons(true);
+      statusEl.innerHTML = `Go! Whack the face as it pops up.`;
+
+      const now = performance.now();
+      endAt = now + GAME_SECONDS * 1000;
+      nextPopAt = now + 350;
+
+      popDown();
+      raf = requestAnimationFrame(tick);
+    }
+
+    function stop(){
+      setButtons(false);
+      if(raf) cancelAnimationFrame(raf);
+      raf = null;
+      popDown();
+      setBestIfNeeded();
+      statusEl.innerHTML = `Stopped. Press <b>Start</b> to play again.`;
+    }
+
+    function restart(){
+      stop();
+      start();
+    }
+
+    // wire up
+    startBtn.addEventListener("click", start);
+    stopBtn.addEventListener("click", stop);
+    restartBtn.addEventListener("click", restart);
+
+    // init
+    buildBoard();
+  </script>
+</body>
+</html>
